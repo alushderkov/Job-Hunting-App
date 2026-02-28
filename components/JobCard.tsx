@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/theme";
+import { useLocalization } from "@/contexts/LocalizationContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Job } from "@/types/job";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,6 +26,7 @@ export function JobCard({
   showSaveButton = true,
 }: JobCardProps) {
   const { colorScheme } = useTheme();
+  const { t } = useLocalization();
   const colors = Colors[colorScheme || "light"];
 
   const formatDate = (dateString: string) => {
@@ -118,6 +120,19 @@ export function JobCard({
         <Text style={[styles.postedDate, { color: colors.icon }]}>
           {formatDate(job.postedDate)}
         </Text>
+        {job.source === "remote" ? (
+          <View style={styles.onlineBadge}>
+            <Ionicons name="globe-outline" size={11} color="#fff" />
+            <Text style={styles.onlineBadgeText}>{t("badge.online")}</Text>
+          </View>
+        ) : (
+          <View style={[styles.localBadge, { borderColor: colors.icon }]}>
+            <Ionicons name="person-outline" size={11} color={colors.icon} />
+            <Text style={[styles.localBadgeText, { color: colors.icon }]}>
+              {t("badge.mine")}
+            </Text>
+          </View>
+        )}
       </View>
     </Pressable>
   );
@@ -184,5 +199,32 @@ const styles = StyleSheet.create({
   postedDate: {
     fontSize: 12,
     fontStyle: "italic",
+  },
+  onlineBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0a7ea4",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+  },
+  onlineBadgeText: {
+    fontSize: 11,
+    color: "#fff",
+    fontWeight: "600",
+  },
+  localBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 4,
+  },
+  localBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
   },
 });
