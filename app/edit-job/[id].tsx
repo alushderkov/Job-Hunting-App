@@ -1,3 +1,4 @@
+import { InputField } from "@/components/InputField";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Colors } from "@/constants/theme";
 import { useLocalization } from "@/contexts/LocalizationContext";
@@ -13,7 +14,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -72,15 +72,15 @@ export default function EditJobScreen() {
 
   const validateForm = (): boolean => {
     if (!formData.title.trim()) {
-      Alert.alert(t("common.error"), "Please enter a job title");
+      Alert.alert(t("common.error"), t("validation.jobTitle"));
       return false;
     }
     if (!formData.company.trim()) {
-      Alert.alert(t("common.error"), "Please enter a company name");
+      Alert.alert(t("common.error"), t("validation.company"));
       return false;
     }
     if (!formData.description.trim()) {
-      Alert.alert(t("common.error"), "Please enter a job description");
+      Alert.alert(t("common.error"), t("validation.description"));
       return false;
     }
     return true;
@@ -95,7 +95,7 @@ export default function EditJobScreen() {
       router.back();
     } catch (error) {
       console.error("Error updating job:", error);
-      Alert.alert(t("common.error"), "Failed to update job");
+      Alert.alert(t("common.error"), t("error.updateJob"));
     } finally {
       setIsSaving(false);
     }
@@ -104,44 +104,6 @@ export default function EditJobScreen() {
   const handleCancel = () => {
     router.back();
   };
-
-  const InputField = ({
-    label,
-    placeholder,
-    value,
-    onChangeText,
-    multiline = false,
-    numberOfLines = 1,
-  }: {
-    label: string;
-    placeholder: string;
-    value: string;
-    onChangeText: (text: string) => void;
-    multiline?: boolean;
-    numberOfLines?: number;
-  }) => (
-    <View style={styles.inputContainer}>
-      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
-      <TextInput
-        style={[
-          styles.input,
-          multiline && styles.multilineInput,
-          {
-            backgroundColor: colorScheme === "dark" ? "#1E1E1E" : "#F5F5F5",
-            color: colors.text,
-            borderColor: colorScheme === "dark" ? "#2A2A2A" : "#E0E0E0",
-          },
-        ]}
-        placeholder={placeholder}
-        placeholderTextColor={colors.icon}
-        value={value}
-        onChangeText={onChangeText}
-        multiline={multiline}
-        numberOfLines={numberOfLines}
-        textAlignVertical={multiline ? "top" : "center"}
-      />
-    </View>
-  );
 
   if (isLoading) {
     return <LoadingSpinner />;
@@ -188,6 +150,9 @@ export default function EditJobScreen() {
           placeholder={t("addJob.titlePlaceholder")}
           value={formData.title}
           onChangeText={(text) => handleInputChange("title", text)}
+          colorScheme={colorScheme || "light"}
+          textColor={colors.text}
+          iconColor={colors.icon}
         />
 
         <InputField
@@ -195,6 +160,9 @@ export default function EditJobScreen() {
           placeholder={t("addJob.companyPlaceholder")}
           value={formData.company}
           onChangeText={(text) => handleInputChange("company", text)}
+          colorScheme={colorScheme || "light"}
+          textColor={colors.text}
+          iconColor={colors.icon}
         />
 
         <InputField
@@ -202,6 +170,9 @@ export default function EditJobScreen() {
           placeholder={t("addJob.locationPlaceholder")}
           value={formData.location}
           onChangeText={(text) => handleInputChange("location", text)}
+          colorScheme={colorScheme || "light"}
+          textColor={colors.text}
+          iconColor={colors.icon}
         />
 
         <InputField
@@ -209,6 +180,9 @@ export default function EditJobScreen() {
           placeholder={t("addJob.salaryPlaceholder")}
           value={formData.salary}
           onChangeText={(text) => handleInputChange("salary", text)}
+          colorScheme={colorScheme || "light"}
+          textColor={colors.text}
+          iconColor={colors.icon}
         />
 
         <InputField
@@ -216,6 +190,9 @@ export default function EditJobScreen() {
           placeholder={t("addJob.descriptionPlaceholder")}
           value={formData.description}
           onChangeText={(text) => handleInputChange("description", text)}
+          colorScheme={colorScheme || "light"}
+          textColor={colors.text}
+          iconColor={colors.icon}
           multiline
           numberOfLines={6}
         />
@@ -225,6 +202,9 @@ export default function EditJobScreen() {
           placeholder={t("addJob.requirementsPlaceholder")}
           value={formData.requirements}
           onChangeText={(text) => handleInputChange("requirements", text)}
+          colorScheme={colorScheme || "light"}
+          textColor={colors.text}
+          iconColor={colors.icon}
           multiline
           numberOfLines={6}
         />
@@ -265,24 +245,5 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 32,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  input: {
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    borderWidth: 1,
-  },
-  multilineInput: {
-    minHeight: 120,
-    paddingTop: 12,
   },
 });

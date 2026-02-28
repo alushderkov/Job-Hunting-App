@@ -23,7 +23,7 @@ export default function JobDetailsScreen() {
   const jobId = params.id as string;
 
   const { colorScheme } = useTheme();
-  const { t } = useLocalization();
+  const { t, language } = useLocalization();
   const colors = Colors[colorScheme || "light"];
 
   const [job, setJob] = useState<Job | null>(null);
@@ -87,7 +87,8 @@ export default function JobDetailsScreen() {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
+    const locale = language === "ru" ? "ru-RU" : "en-US";
+    return date.toLocaleDateString(locale, {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -102,7 +103,7 @@ export default function JobDetailsScreen() {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <Text style={[styles.errorText, { color: colors.text }]}>
-          Job not found
+          {t("job.notFound")}
         </Text>
       </View>
     );

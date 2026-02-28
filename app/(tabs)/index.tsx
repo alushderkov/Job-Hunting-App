@@ -4,13 +4,15 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Colors } from "@/constants/theme";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import jobService from "@/services/jobService";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { Job } from "@/types/job";
+import { useJobsViewModel } from "@/viewmodels/JobsViewModel";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Platform,
   RefreshControl,
@@ -26,79 +28,94 @@ export default function HomeScreen() {
   const { colorScheme } = useTheme();
   const { t } = useLocalization();
   const colors = Colors[colorScheme || "light"];
+  const { isConnected } = useNetworkStatus();
 
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [filteredJobs, setFilteredJobs] = useState<Job[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const loadJobs = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const allJobs = await jobService.getAllJobs();
-      setJobs(allJobs);
-      setFilteredJobs(allJobs);
-    } catch (error) {
-      console.error("Error loading jobs:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const vm = useJobsViewModel();
 
   useFocusEffect(
     useCallback(() => {
-      loadJobs();
-    }, [loadJobs])
+      if (vm.activeTab === "local") {
+        vm.handleRefresh();
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [vm.activeTab])
   );
 
-  const filterJobs = useCallback(() => {
-    if (!searchQuery.trim()) {
-      setFilteredJobs(jobs);
-      return;
-    }
-
-    const query = searchQuery.toLowerCase();
-    const filtered = jobs.filter(
-      (job) =>
-        job.title.toLowerCase().includes(query) ||
-        job.company.toLowerCase().includes(query) ||
-        job.location.toLowerCase().includes(query) ||
-        job.description.toLowerCase().includes(query)
-    );
-    setFilteredJobs(filtered);
-  }, [jobs, searchQuery]);
-
-  useEffect(() => {
-    filterJobs();
-  }, [filterJobs]);
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await loadJobs();
-    setIsRefreshing(false);
-  };
-
-  const handleJobPress = (jobId: string) => {
-    router.push(`/job/${jobId}`);
-  };
-
-  const handleSaveToggle = async (job: Job) => {
-    try {
-      if (job.isSaved) {
-        await jobService.unsaveJob(job.id);
-      } else {
-        await jobService.saveJob(job.id);
-      }
-      await loadJobs();
-    } catch (error) {
-      console.error("Error toggling save:", error);
+  const handleJobPress = (job: Job) => {
+    if (job.source === "remote" && job.applyUrl) {
+      router.push(
+        `/job/${job.id}?applyUrl=${encodeURIComponent(job.applyUrl)}`
+      );
+    } else {
+      router.push(`/job/${job.id}`);
     }
   };
 
-  const handleAddJob = () => {
-    router.push("/add-job");
-  };
+  const isDark = colorScheme === "dark";
+
+  const renderTabBar = () => (
+    <View
+      style={[
+        styles.tabBar,
+        { borderBottomColor: isDark ? "#2A2A2A" : "#E5E5E5" },
+      ]}
+    >
+      <TouchableOpacity
+        style={[
+          styles.tab,
+          vm.activeTab === "local" && {
+            borderBottomColor: colors.tint,
+            borderBottomWidth: 2,
+          },
+        ]}
+        onPress={() => vm.setActiveTab("local")}
+        activeOpacity={0.7}
+      >
+        <Ionicons
+          name="briefcase-outline"
+          size={16}
+          color={vm.activeTab === "local" ? colors.tint : colors.icon}
+          style={styles.tabIcon}
+        />
+        <Text
+          style={[
+            styles.tabText,
+            { color: vm.activeTab === "local" ? colors.tint : colors.icon },
+          ]}
+        >
+          {t("home.tabLocal")}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.tab,
+          vm.activeTab === "remote" && {
+            borderBottomColor: colors.tint,
+            borderBottomWidth: 2,
+          },
+        ]}
+        onPress={() => vm.setActiveTab("remote")}
+        activeOpacity={0.7}
+      >
+        <Ionicons
+          name="globe-outline"
+          size={16}
+          color={vm.activeTab === "remote" ? colors.tint : colors.icon}
+          style={styles.tabIcon}
+        />
+        <Text
+          style={[
+            styles.tabText,
+            { color: vm.activeTab === "remote" ? colors.tint : colors.icon },
+          ]}
+        >
+          {t("home.tabRemote")}
+        </Text>
+        {!isConnected && <View style={styles.offlineDot} />}
+      </TouchableOpacity>
+    </View>
+  );
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -106,101 +123,195 @@ export default function HomeScreen() {
         {t("home.title")}
       </Text>
 
-      <View
-        style={[
-          styles.searchContainer,
-          {
-            backgroundColor: colorScheme === "dark" ? "#2A2A2A" : "#F5F5F5",
-            borderColor: colorScheme === "dark" ? "#3A3A3A" : "#E0E0E0",
-          },
-        ]}
-      >
-        <Ionicons
-          name="search"
-          size={20}
-          color={colors.icon}
-          style={styles.searchIcon}
-        />
-        <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder={t("home.search")}
-          placeholderTextColor={colors.icon}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery("")}>
-            <Ionicons name="close-circle" size={20} color={colors.icon} />
-          </TouchableOpacity>
-        )}
-      </View>
+      {vm.activeTab === "local" && (
+        <View
+          style={[
+            styles.searchContainer,
+            {
+              backgroundColor: isDark ? "#2A2A2A" : "#F5F5F5",
+              borderColor: isDark ? "#3A3A3A" : "#E0E0E0",
+            },
+          ]}
+        >
+          <Ionicons
+            name="search"
+            size={20}
+            color={colors.icon}
+            style={styles.searchIcon}
+          />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder={t("home.search")}
+            placeholderTextColor={colors.icon}
+            value={vm.searchQuery}
+            onChangeText={vm.setSearchQuery}
+          />
+          {vm.searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => vm.setSearchQuery("")}>
+              <Ionicons name="close-circle" size={20} color={colors.icon} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {vm.activeTab === "remote" && vm.remoteFromCache && (
+        <View
+          style={[
+            styles.cacheNotice,
+            { backgroundColor: isDark ? "#2A1500" : "#FFF3E0" },
+          ]}
+        >
+          <Ionicons name="cloud-offline-outline" size={14} color="#FF9800" />
+          <Text style={styles.cacheNoticeText}>{t("network.cached")}</Text>
+        </View>
+      )}
 
       <View style={styles.headerRow}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          {t("home.allJobs")} ({filteredJobs.length})
+          {vm.activeTab === "local"
+            ? `${t("home.allJobs")} (${vm.filteredLocalJobs.length})`
+            : `${t("home.onlineJobs")} (${vm.remoteJobs.length})`}
         </Text>
       </View>
     </View>
   );
 
-  if (isLoading) {
+  const currentJobs =
+    vm.activeTab === "local" ? vm.filteredLocalJobs : vm.remoteJobs;
+  const currentLoading =
+    vm.activeTab === "local" ? vm.isLoadingLocal : vm.isLoadingRemote;
+
+  if (vm.activeTab === "local" && vm.isLoadingLocal) {
     return <LoadingSpinner />;
   }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <FlatList
-        data={filteredJobs}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <JobCard
-            job={item}
-            onPress={() => handleJobPress(item.id)}
-            onSaveToggle={() => handleSaveToggle(item)}
-          />
-        )}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={
-          <EmptyState
-            icon="briefcase-outline"
-            title={t("home.noJobs")}
-            message={
-              searchQuery
-                ? `No jobs found for "${searchQuery}"`
-                : "Start by adding your first job!"
-            }
-          />
-        }
-        contentContainerStyle={
-          filteredJobs.length === 0 ? styles.emptyList : undefined
-        }
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.tint}
-          />
-        }
-      />
-
-      <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.tint }]}
-        onPress={handleAddJob}
-        activeOpacity={0.8}
+      {/* Pinned tab switcher */}
+      <View
+        style={[
+          styles.tabBarWrapper,
+          {
+            backgroundColor: colors.background,
+            paddingTop: Platform.OS === "ios" ? 56 : 16,
+          },
+        ]}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
-      </TouchableOpacity>
+        {renderTabBar()}
+      </View>
+
+      {vm.activeTab === "remote" && currentLoading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.tint} />
+          <Text style={[styles.loadingText, { color: colors.icon }]}>
+            {t("home.loading")}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={currentJobs}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <JobCard
+              job={item}
+              onPress={() => handleJobPress(item)}
+              onSaveToggle={
+                vm.activeTab === "local"
+                  ? () => vm.handleSaveToggle(item)
+                  : undefined
+              }
+            />
+          )}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={
+            <EmptyState
+              icon={
+                vm.activeTab === "local" ? "briefcase-outline" : "globe-outline"
+              }
+              title={
+                vm.activeTab === "local"
+                  ? t("home.noJobs")
+                  : t("home.noRemoteJobs")
+              }
+              message={
+                vm.activeTab === "local"
+                  ? vm.searchQuery
+                    ? `${t("home.noSearchResult")} "${vm.searchQuery}"`
+                    : t("home.noLocalJobs")
+                  : !isConnected
+                    ? t("home.noConnection")
+                    : t("home.loading")
+              }
+            />
+          }
+          contentContainerStyle={
+            currentJobs.length === 0 ? styles.emptyList : undefined
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={vm.isRefreshing}
+              onRefresh={vm.handleRefresh}
+              tintColor={colors.tint}
+            />
+          }
+        />
+      )}
+
+      {/* FAB — only on local tab */}
+      {vm.activeTab === "local" && (
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: colors.tint }]}
+          onPress={() => router.push("/add-job")}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={28} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  container: { flex: 1 },
+  tabBarWrapper: {
+    zIndex: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabBar: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+  },
+  tab: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingBottom: 10,
+  },
+  tabIcon: {
+    marginRight: 6,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  offlineDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: "#EF4444",
+    marginLeft: 6,
+    marginBottom: 8,
+    alignSelf: "flex-start",
   },
   header: {
     padding: 16,
-    paddingTop: Platform.OS === "ios" ? 60 : 16,
+    paddingTop: 16,
   },
   title: {
     fontSize: 32,
@@ -213,7 +324,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    marginBottom: 20,
+    marginBottom: 12,
     borderWidth: 1,
   },
   searchIcon: {
@@ -224,6 +335,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     padding: 0,
   },
+  cacheNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 6,
+  },
+  cacheNoticeText: {
+    fontSize: 12,
+    color: "#FF9800",
+    fontWeight: "500",
+  },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -233,6 +358,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
+  },
+  centered: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 15,
   },
   emptyList: {
     flex: 1,

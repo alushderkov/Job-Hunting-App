@@ -38,6 +38,30 @@ const translations: Record<Language, Record<string, string>> = {
     "home.noJobs": "No jobs found",
     "home.addJob": "Add Job",
 
+    // Tabs LabWork 2
+    "home.tabLocal": "My Jobs",
+    "home.tabRemote": "Find Work",
+    "home.onlineJobs": "Online Jobs",
+    "home.loading": "Loading jobs...",
+    "home.noRemoteJobs": "No remote jobs",
+    "home.noConnection": "No internet connection and no cache",
+    "home.noLocalJobs": "Start by adding your first job!",
+    "home.noSearchResult": "No jobs found for",
+
+    // Network & Cache
+    "network.offline": "No internet connection",
+    "network.restored": "Connection restored",
+    "network.cached": "Showing cached data · will update when connected",
+
+    // Source badges
+    "badge.online": "Online",
+    "badge.mine": "Mine",
+
+    // Job Detail remote
+    "job.notFound": "Job not found",
+    "job.savedCount": "job saved",
+    "job.savedCountPlural": "jobs saved",
+
     // Job Details
     "job.details": "Job Details",
     "job.company": "Company",
@@ -110,6 +134,20 @@ const translations: Record<Language, Record<string, string>> = {
     "message.jobSaved": "Job saved to favorites",
     "message.jobUnsaved": "Job removed from favorites",
     "message.deleteConfirm": "Are you sure you want to delete this job?",
+
+    // Validation
+    "validation.jobTitle": "Please enter a job title",
+    "validation.company": "Please enter a company name",
+    "validation.description": "Please enter a job description",
+
+    // Errors
+    "error.createJob": "Failed to create job",
+    "error.updateJob": "Failed to update job",
+
+    // Dialog
+    "discard.confirm": "Are you sure you want to discard this job?",
+    "common.yes": "Yes",
+    "common.no": "No",
   },
   ru: {
     // Tab Navigation
@@ -123,6 +161,30 @@ const translations: Record<Language, Record<string, string>> = {
     "home.allJobs": "Все вакансии",
     "home.noJobs": "Вакансии не найдены",
     "home.addJob": "Добавить вакансию",
+
+    // Tabs LabWork 2
+    "home.tabLocal": "Мои вакансии",
+    "home.tabRemote": "Найти работу",
+    "home.onlineJobs": "Online вакансии",
+    "home.loading": "Загрузка вакансий...",
+    "home.noRemoteJobs": "Нет вакансий",
+    "home.noConnection": "Нет интернет-соединения и кэша",
+    "home.noLocalJobs": "Добавьте первую вакансию!",
+    "home.noSearchResult": "Нет вакансий по запросу",
+
+    // Network & Cache
+    "network.offline": "Нет подключения к интернету",
+    "network.restored": "Соединение восстановлено",
+    "network.cached": "Данные из кэша · обновятся при подключении",
+
+    // Source badges
+    "badge.online": "Online",
+    "badge.mine": "Моя",
+
+    // Job Detail remote
+    "job.notFound": "Вакансия не найдена",
+    "job.savedCount": "вакансия сохранена",
+    "job.savedCountPlural": "вакансий сохранено",
 
     // Job Details
     "job.details": "Детали вакансии",
@@ -196,6 +258,20 @@ const translations: Record<Language, Record<string, string>> = {
     "message.jobSaved": "Вакансия сохранена в избранное",
     "message.jobUnsaved": "Вакансия удалена из избранного",
     "message.deleteConfirm": "Вы уверены, что хотите удалить эту вакансию?",
+
+    // Validation
+    "validation.jobTitle": "Введите название вакансии",
+    "validation.company": "Введите название компании",
+    "validation.description": "Введите описание вакансии",
+
+    // Errors
+    "error.createJob": "Не удалось создать вакансию",
+    "error.updateJob": "Не удалось обновить вакансию",
+
+    // Dialog
+    "discard.confirm": "Отменить изменения?",
+    "common.yes": "Да",
+    "common.no": "Нет",
   },
 };
 

@@ -10,7 +10,6 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-// Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync().catch(console.warn);
 
 export default function SplashScreenComponent() {
@@ -20,22 +19,20 @@ export default function SplashScreenComponent() {
   const translateY = useSharedValue(50);
 
   useEffect(() => {
-    // Start animations
     opacity.value = withTiming(1, {
-      duration: 800,
+      duration: 1000,
       easing: Easing.out(Easing.cubic),
     });
     scale.value = withSpring(1, { damping: 10, stiffness: 100 });
     translateY.value = withTiming(0, {
-      duration: 800,
+      duration: 1000,
       easing: Easing.out(Easing.cubic),
     });
 
-    // Navigate to main app after delay
     const timer = setTimeout(async () => {
       await SplashScreen.hideAsync();
       router.replace("/(tabs)");
-    }, 2500);
+    }, 300);
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps

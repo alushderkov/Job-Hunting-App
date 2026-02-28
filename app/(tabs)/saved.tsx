@@ -4,11 +4,10 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Colors } from "@/constants/theme";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import jobService from "@/services/jobService";
-import { Job } from "@/types/job";
+import { useSavedJobsViewModel } from "@/viewmodels/SavedJobsViewModel";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback } from "react";
 import {
   FlatList,
   Platform,
@@ -24,47 +23,22 @@ export default function SavedJobsScreen() {
   const { t } = useLocalization();
   const colors = Colors[colorScheme || "light"];
 
-  const [savedJobs, setSavedJobs] = useState<Job[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const loadSavedJobs = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const jobs = await jobService.getSavedJobs();
-      setSavedJobs(jobs);
-    } catch (error) {
-      console.error("Error loading saved jobs:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // ViewModel handles all business logic
+  const {
+    savedJobs,
+    isLoading,
+    isRefreshing,
+    handleUnsave,
+    handleRefresh,
+    reload,
+  } = useSavedJobsViewModel();
 
   // Reload when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      loadSavedJobs();
-    }, [loadSavedJobs])
+      reload();
+    }, [reload])
   );
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await loadSavedJobs();
-    setIsRefreshing(false);
-  };
-
-  const handleJobPress = (jobId: string) => {
-    router.push(`/job/${jobId}`);
-  };
-
-  const handleUnsaveJob = async (job: Job) => {
-    try {
-      await jobService.unsaveJob(job.id);
-      await loadSavedJobs();
-    } catch (error) {
-      console.error("Error unsaving job:", error);
-    }
-  };
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -73,7 +47,10 @@ export default function SavedJobsScreen() {
       </Text>
       {savedJobs.length > 0 && (
         <Text style={[styles.subtitle, { color: colors.icon }]}>
-          {savedJobs.length} {savedJobs.length === 1 ? "job" : "jobs"} saved
+          {savedJobs.length}{" "}
+          {savedJobs.length === 1
+            ? t("job.savedCount")
+            : t("job.savedCountPlural")}
         </Text>
       )}
     </View>
@@ -91,8 +68,8 @@ export default function SavedJobsScreen() {
         renderItem={({ item }) => (
           <JobCard
             job={item}
-            onPress={() => handleJobPress(item.id)}
-            onSaveToggle={() => handleUnsaveJob(item)}
+            onPress={() => router.push(`/job/${item.id}`)}
+            onSaveToggle={() => handleUnsave(item)}
           />
         )}
         ListHeaderComponent={renderHeader}
