@@ -1,40 +1,75 @@
 import { CreateJobInput, Job, UpdateJobInput } from "@/types/job";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { v4 as uuidv4 } from "uuid";
+import { supabase } from "./supabase";
 
-const JOBS_STORAGE_KEY = "@jobs_data";
 const SAVED_JOBS_STORAGE_KEY = "@saved_jobs";
+const LOCAL_JOBS_CACHE_KEY = "@local_jobs_cache";
+const SAVED_JOBS_FULL_CACHE_KEY = "@saved_jobs_full_cache";
 
 class JobService {
-  // Generate unique ID
-  private generateId(): string {
-    return `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  // Get all jobs
-  async getAllJobs(): Promise<Job[]> {
+  // Get all jobs with caching
+  async getAllJobs(): Promise<{ jobs: Job[]; fromCache: boolean }> {
     try {
-      const jobsJson = await AsyncStorage.getItem(JOBS_STORAGE_KEY);
-      if (jobsJson) {
-        return JSON.parse(jobsJson);
-      }
+      const { data, error } = await supabase
+        .from("jobs")
+        .select("*")
+        .eq("isLocal", true)
+        .order("createdAt", { ascending: false });
 
-      // Return sample data if no jobs exist
-      const sampleJobs = this.getSampleJobs();
-      await this.saveJobs(sampleJobs);
-      return sampleJobs;
+      if (error) throw error;
+
+      const jobs: Job[] = data || [];
+      const savedJobIds = await this.getSavedJobIds();
+
+      const mappedJobs = jobs.map((job) => ({
+        ...job,
+        isSaved: savedJobIds.includes(job.id),
+      }));
+
+      // Cache the result
+      await AsyncStorage.setItem(
+        LOCAL_JOBS_CACHE_KEY,
+        JSON.stringify(mappedJobs)
+      );
+
+      return { jobs: mappedJobs, fromCache: false };
     } catch (error) {
-      console.error("Error getting jobs:", error);
-      return [];
+      console.warn(
+        "Offline or Error getting jobs from Supabase, trying cache:",
+        error
+      );
+      try {
+        const cached = await AsyncStorage.getItem(LOCAL_JOBS_CACHE_KEY);
+        if (cached) {
+          return { jobs: JSON.parse(cached), fromCache: true };
+        }
+      } catch (cacheErr) {
+        console.error("Cache read error:", cacheErr);
+      }
+      return { jobs: [], fromCache: false };
     }
   }
 
   // Get job by ID
   async getJobById(id: string): Promise<Job | null> {
     try {
-      const jobs = await this.getAllJobs();
-      return jobs.find((job) => job.id === id) || null;
+      const { data, error } = await supabase
+        .from("jobs")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (error) throw error;
+      if (!data) return null;
+
+      const savedJobIds = await this.getSavedJobIds();
+      return {
+        ...data,
+        isSaved: savedJobIds.includes(data.id),
+      };
     } catch (error) {
-      console.error("Error getting job by ID:", error);
+      console.error("Error getting job by ID from Supabase:", error);
       return null;
     }
   }
@@ -42,23 +77,35 @@ class JobService {
   // Create new job
   async createJob(input: CreateJobInput): Promise<Job> {
     try {
-      const jobs = await this.getAllJobs();
-      const now = new Date().toISOString();
+      const newId = uuidv4();
+      const { data, error } = await supabase
+        .from("jobs")
+        .insert([
+          {
+            id: newId,
+            title: input.title,
+            company: input.company,
+            location: input.location,
+            salary: input.salary,
+            description: input.description,
+            requirements: input.requirements,
+            postedDate: input.postedDate,
+            imageUrl: input.imageUrl,
+            jobType: input.jobType,
+            isLocal: true,
+          },
+        ])
+        .select()
+        .single();
 
-      const newJob: Job = {
-        ...input,
-        id: this.generateId(),
+      if (error) throw error;
+
+      return {
+        ...data,
         isSaved: false,
-        createdAt: now,
-        updatedAt: now,
       };
-
-      jobs.unshift(newJob); // Add to beginning
-      await this.saveJobs(jobs);
-
-      return newJob;
     } catch (error) {
-      console.error("Error creating job:", error);
+      console.error("Error creating job in Supabase:", error);
       throw error;
     }
   }
@@ -66,25 +113,34 @@ class JobService {
   // Update job
   async updateJob(id: string, input: UpdateJobInput): Promise<Job | null> {
     try {
-      const jobs = await this.getAllJobs();
-      const jobIndex = jobs.findIndex((job) => job.id === id);
+      const { data, error } = await supabase
+        .from("jobs")
+        .update({
+          title: input.title,
+          company: input.company,
+          location: input.location,
+          salary: input.salary,
+          description: input.description,
+          requirements: input.requirements,
+          imageUrl: input.imageUrl,
+          jobType: input.jobType,
+          isLocal: true,
+          updatedAt: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .select()
+        .single();
 
-      if (jobIndex === -1) {
-        return null;
-      }
+      if (error) throw error;
+      if (!data) return null;
 
-      const updatedJob: Job = {
-        ...jobs[jobIndex],
-        ...input,
-        updatedAt: new Date().toISOString(),
+      const savedJobIds = await this.getSavedJobIds();
+      return {
+        ...data,
+        isSaved: savedJobIds.includes(data.id),
       };
-
-      jobs[jobIndex] = updatedJob;
-      await this.saveJobs(jobs);
-
-      return updatedJob;
     } catch (error) {
-      console.error("Error updating job:", error);
+      console.error("Error updating job in Supabase:", error);
       throw error;
     }
   }
@@ -92,39 +148,47 @@ class JobService {
   // Delete job
   async deleteJob(id: string): Promise<boolean> {
     try {
-      const jobs = await this.getAllJobs();
-      const filteredJobs = jobs.filter((job) => job.id !== id);
+      const { error } = await supabase.from("jobs").delete().eq("id", id);
 
-      if (filteredJobs.length === jobs.length) {
-        return false; // Job not found
-      }
+      if (error) throw error;
 
-      await this.saveJobs(filteredJobs);
-
-      // Also remove from saved jobs if it was saved
+      // Also remove from saved jobs locally if it was saved
       await this.unsaveJob(id);
 
       return true;
     } catch (error) {
-      console.error("Error deleting job:", error);
+      console.error("Error deleting job from Supabase:", error);
       throw error;
     }
   }
 
-  // Save job to favorites
-  async saveJob(id: string): Promise<boolean> {
+  // Save job to favorites (Local + Supabase for remote jobs)
+  async saveJob(id: string, job?: Job): Promise<boolean> {
     try {
-      const jobs = await this.getAllJobs();
-      const jobIndex = jobs.findIndex((job) => job.id === id);
+      if (
+        job &&
+        (job.source === "remote" ||
+          job.isLocal === false ||
+          job.id.startsWith("remotive_"))
+      ) {
+        const { error: upsertError } = await supabase.from("jobs").upsert({
+          id: job.id,
+          title: job.title,
+          company: job.company,
+          location: job.location,
+          salary: job.salary,
+          description: job.description,
+          requirements: job.requirements,
+          postedDate: job.postedDate,
+          imageUrl: job.imageUrl,
+          jobType: job.jobType,
+          isLocal: false,
+          updatedAt: new Date().toISOString(),
+        });
 
-      if (jobIndex === -1) {
-        return false;
+        if (upsertError) throw upsertError;
       }
 
-      jobs[jobIndex].isSaved = true;
-      await this.saveJobs(jobs);
-
-      // Add to saved jobs list
       const savedJobIds = await this.getSavedJobIds();
       if (!savedJobIds.includes(id)) {
         savedJobIds.push(id);
@@ -133,184 +197,112 @@ class JobService {
           JSON.stringify(savedJobIds)
         );
       }
-
       return true;
     } catch (error) {
-      console.error("Error saving job:", error);
+      console.error("Error saving job locally:", error);
       throw error;
     }
   }
 
-  // Unsave job from favorites
+  // Unsave job from favorites (Local)
   async unsaveJob(id: string): Promise<boolean> {
     try {
-      const jobs = await this.getAllJobs();
-      const jobIndex = jobs.findIndex((job) => job.id === id);
-
-      if (jobIndex !== -1) {
-        jobs[jobIndex].isSaved = false;
-        await this.saveJobs(jobs);
-      }
-
-      // Remove from saved jobs list
       const savedJobIds = await this.getSavedJobIds();
       const filteredIds = savedJobIds.filter((savedId) => savedId !== id);
       await AsyncStorage.setItem(
         SAVED_JOBS_STORAGE_KEY,
         JSON.stringify(filteredIds)
       );
-
       return true;
     } catch (error) {
-      console.error("Error unsaving job:", error);
+      console.error("Error unsaving job locally:", error);
       throw error;
     }
   }
 
-  // Get saved jobs
-  async getSavedJobs(): Promise<Job[]> {
+  // Get saved jobs with caching
+  async getSavedJobs(): Promise<{ jobs: Job[]; fromCache: boolean }> {
     try {
-      const allJobs = await this.getAllJobs();
-      return allJobs.filter((job) => job.isSaved);
-    } catch (error) {
-      console.error("Error getting saved jobs:", error);
-      return [];
+      const savedJobIds = await this.getSavedJobIds();
+      if (savedJobIds.length === 0) return { jobs: [], fromCache: false };
+
+      const { data, error } = await supabase
+        .from("jobs")
+        .select("*")
+        .in("id", savedJobIds);
+
+      if (error) throw error;
+
+      const jobs: Job[] = data || [];
+      const mappedJobs = jobs.map((job) => ({
+        ...job,
+        isSaved: true,
+      }));
+
+      // Cache the full data for offline use
+      await AsyncStorage.setItem(
+        SAVED_JOBS_FULL_CACHE_KEY,
+        JSON.stringify(mappedJobs)
+      );
+
+      return { jobs: mappedJobs, fromCache: false };
+    } catch (err) {
+      console.warn("Offline or Error getting saved jobs, trying cache:", err);
+      try {
+        const cached = await AsyncStorage.getItem(SAVED_JOBS_FULL_CACHE_KEY);
+        if (cached) {
+          return { jobs: JSON.parse(cached), fromCache: true };
+        }
+      } catch (cacheErr) {
+        console.error("Cache read error:", cacheErr);
+      }
+      return { jobs: [], fromCache: false };
     }
   }
 
-  // Search jobs
+  // Search jobs (Server-side search)
   async searchJobs(query: string): Promise<Job[]> {
     try {
-      const jobs = await this.getAllJobs();
-      const lowerQuery = query.toLowerCase();
+      const { data, error } = await supabase
+        .from("jobs")
+        .select("*")
+        .eq("isLocal", true)
+        .or(
+          `title.ilike.%${query}%,company.ilike.%${query}%,location.ilike.%${query}%,description.ilike.%${query}%`
+        )
+        .order("createdAt", { ascending: false });
 
-      return jobs.filter(
-        (job) =>
-          job.title.toLowerCase().includes(lowerQuery) ||
-          job.company.toLowerCase().includes(lowerQuery) ||
-          job.location.toLowerCase().includes(lowerQuery) ||
-          job.description.toLowerCase().includes(lowerQuery)
-      );
+      if (error) throw error;
+
+      const jobs: Job[] = data || [];
+      const savedJobIds = await this.getSavedJobIds();
+
+      return jobs.map((job) => ({
+        ...job,
+        isSaved: savedJobIds.includes(job.id),
+      }));
     } catch (error) {
-      console.error("Error searching jobs:", error);
+      console.error("Error searching jobs in Supabase:", error);
       return [];
     }
   }
 
-  // Private helper methods
-  private async saveJobs(jobs: Job[]): Promise<void> {
-    await AsyncStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(jobs));
-  }
-
-  private async getSavedJobIds(): Promise<string[]> {
+  // Helper to get saved job IDs from AsyncStorage
+  async getSavedJobIds(): Promise<string[]> {
     try {
       const savedJobsJson = await AsyncStorage.getItem(SAVED_JOBS_STORAGE_KEY);
       return savedJobsJson ? JSON.parse(savedJobsJson) : [];
-    } catch (error) {
+    } catch {
       return [];
     }
   }
 
-  // Sample data for initial load
-  private getSampleJobs(): Job[] {
-    const now = new Date().toISOString();
-
-    return [
-      {
-        id: this.generateId(),
-        title: "Senior React Native Developer",
-        company: "TechCorp International",
-        location: "Remote, Worldwide",
-        salary: "$90,000 - $130,000",
-        description:
-          "We are looking for an experienced React Native developer to join our mobile team. You will be responsible for building high-quality mobile applications for iOS and Android platforms.",
-        requirements:
-          "5+ years of React Native experience\nStrong knowledge of JavaScript/TypeScript\nExperience with Redux or MobX\nFamiliarity with native build tools\nExcellent problem-solving skills",
-        postedDate: new Date(
-          Date.now() - 2 * 24 * 60 * 60 * 1000
-        ).toISOString(),
-        isSaved: false,
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: this.generateId(),
-        title: "Full Stack JavaScript Developer",
-        company: "StartupHub",
-        location: "Remote, Europe",
-        salary: "€60,000 - €85,000",
-        description:
-          "Join our dynamic startup as a Full Stack Developer. Work on exciting projects using modern JavaScript technologies including React, Node.js, and MongoDB.",
-        requirements:
-          "3+ years of full-stack development\nProficiency in React and Node.js\nExperience with MongoDB or PostgreSQL\nKnowledge of REST APIs and GraphQL\nGood communication skills",
-        postedDate: new Date(
-          Date.now() - 5 * 24 * 60 * 60 * 1000
-        ).toISOString(),
-        isSaved: false,
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: this.generateId(),
-        title: "Mobile App Developer (iOS/Android)",
-        company: "Digital Solutions Ltd",
-        location: "Remote, USA",
-        salary: "$80,000 - $110,000",
-        description:
-          "We need a talented mobile developer to create innovative applications for our clients. Experience with both native and cross-platform development is a plus.",
-        requirements:
-          "Experience with React Native or Flutter\nKnowledge of native iOS/Android development\nUnderstanding of mobile UI/UX principles\nExperience with app deployment\nStrong portfolio of published apps",
-        postedDate: new Date(
-          Date.now() - 7 * 24 * 60 * 60 * 1000
-        ).toISOString(),
-        isSaved: false,
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: this.generateId(),
-        title: "Frontend Developer (React)",
-        company: "WebWorks Agency",
-        location: "Remote, Canada",
-        salary: "CAD 70,000 - 95,000",
-        description:
-          "Looking for a passionate Frontend Developer to build beautiful and responsive web applications using React and modern CSS frameworks.",
-        requirements:
-          "2+ years of React development\nStrong CSS and HTML skills\nExperience with responsive design\nKnowledge of state management\nAttention to detail",
-        postedDate: new Date(
-          Date.now() - 10 * 24 * 60 * 60 * 1000
-        ).toISOString(),
-        isSaved: false,
-        createdAt: now,
-        updatedAt: now,
-      },
-      {
-        id: this.generateId(),
-        title: "React Native Engineer",
-        company: "MobileFirst Inc",
-        location: "Remote, Asia",
-        salary: "$75,000 - $100,000",
-        description:
-          "Be part of our growing mobile team developing cutting-edge applications for millions of users worldwide. We value innovation and creativity.",
-        requirements:
-          "4+ years mobile development experience\nExpert in React Native\nExperience with CI/CD pipelines\nKnowledge of mobile security best practices\nTeam player with leadership skills",
-        postedDate: new Date(
-          Date.now() - 14 * 24 * 60 * 60 * 1000
-        ).toISOString(),
-        isSaved: false,
-        createdAt: now,
-        updatedAt: now,
-      },
-    ];
-  }
-
-  // Clear all data (for testing)
+  // Clear all data (Note: This only clears local saved IDs for safety)
   async clearAllData(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(JOBS_STORAGE_KEY);
       await AsyncStorage.removeItem(SAVED_JOBS_STORAGE_KEY);
     } catch (error) {
-      console.error("Error clearing data:", error);
+      console.error("Error clearing local data:", error);
     }
   }
 }

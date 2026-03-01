@@ -3,11 +3,14 @@ import { Colors } from "@/constants/theme";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import jobService from "@/services/jobService";
+import { supabase } from "@/services/supabase";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -16,6 +19,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import "react-native-get-random-values";
+import { v4 as uuidv4 } from "uuid";
 
 export default function AddJobScreen() {
   const router = useRouter();
@@ -30,9 +35,67 @@ export default function AddJobScreen() {
     salary: "",
     description: "",
     requirements: "",
+    imageUrl: "",
+    jobType: "full-time",
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const uploadImage = async (uri: string): Promise<string | null> => {
+    try {
+      const ext = uri.substring(uri.lastIndexOf(".") + 1);
+      const fileName = `${uuidv4()}.${ext}`;
+
+      const formData = new FormData();
+      formData.append("file", {
+        uri,
+        name: fileName,
+        type: `image/${ext}`,
+      } as any);
+
+      const { error } = await supabase.storage
+        .from("jobs")
+        .upload(fileName, formData);
+
+      if (error) throw error;
+
+      const { data: publicUrlData } = supabase.storage
+        .from("jobs")
+        .getPublicUrl(fileName);
+
+      return publicUrlData.publicUrl;
+    } catch (error: any) {
+      console.error("Error uploading image:", error);
+
+      if (error?.message?.includes("row-level security policy")) {
+        Alert.alert(
+          "Storage Error",
+          "Failed to upload because of Row-Level Security (RLS) policies. Please check your Supabase Storage policies for the 'jobs' bucket."
+        );
+      } else {
+        Alert.alert(
+          "Upload Error",
+          "Failed to upload image. Please check your connection and Supabase settings."
+        );
+      }
+
+      return null;
+    }
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -59,8 +122,15 @@ export default function AddJobScreen() {
 
     try {
       setIsSaving(true);
+
+      let uploadedImageUrl = null;
+      if (imageUri) {
+        uploadedImageUrl = await uploadImage(imageUri);
+      }
+
       await jobService.createJob({
         ...formData,
+        imageUrl: uploadedImageUrl || undefined,
         postedDate: new Date().toISOString(),
       });
       router.back();
@@ -171,6 +241,42 @@ export default function AddJobScreen() {
           numberOfLines={6}
         />
 
+        <View style={styles.jobTypeContainer}>
+          <Text style={[styles.jobTypeLabel, { color: colors.text }]}>
+            Type of Employment
+          </Text>
+          <View style={styles.jobTypeChips}>
+            {["full-time", "part-time", "contract", "freelance"].map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.jobTypeChip,
+                  {
+                    borderColor: colorScheme === "dark" ? "#3A3A3A" : "#E0E0E0",
+                  },
+                  formData.jobType === type && {
+                    backgroundColor: colors.tint,
+                    borderColor: colors.tint,
+                  },
+                ]}
+                onPress={() => handleInputChange("jobType", type)}
+              >
+                <Text
+                  style={[
+                    styles.jobTypeChipText,
+                    {
+                      color: formData.jobType === type ? "#fff" : colors.text,
+                      textTransform: "capitalize",
+                    },
+                  ]}
+                >
+                  {type.replace("-", " ")}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
         <InputField
           label={t("addJob.requirements")}
           placeholder={t("addJob.requirementsPlaceholder")}
@@ -182,6 +288,21 @@ export default function AddJobScreen() {
           multiline
           numberOfLines={6}
         />
+
+        <View style={styles.imagePickerContainer}>
+          <TouchableOpacity
+            style={[styles.imageButton, { borderColor: colors.tint }]}
+            onPress={pickImage}
+          >
+            <Ionicons name="image-outline" size={24} color={colors.tint} />
+            <Text style={[styles.imageButtonText, { color: colors.tint }]}>
+              {imageUri ? "Change Image" : "Add Image"}
+            </Text>
+          </TouchableOpacity>
+          {imageUri && (
+            <Image source={{ uri: imageUri }} style={styles.previewImage} />
+          )}
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -219,5 +340,51 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 32,
+  },
+  imagePickerContainer: {
+    marginTop: 16,
+    alignItems: "center",
+  },
+  imageButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderWidth: 1,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  imageButtonText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  previewImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: 12,
+    resizeMode: "cover",
+  },
+  jobTypeContainer: {
+    marginBottom: 20,
+  },
+  jobTypeLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  jobTypeChips: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  jobTypeChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  jobTypeChipText: {
+    fontSize: 14,
+    fontWeight: "500",
   },
 });

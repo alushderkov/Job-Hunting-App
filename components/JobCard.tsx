@@ -5,6 +5,7 @@ import { Job } from "@/types/job";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -107,7 +108,23 @@ export function JobCard({
             {job.salary}
           </Text>
         </View>
+
+        {job.jobType && (
+          <View style={styles.detailRow}>
+            <Ionicons name="briefcase-outline" size={16} color={colors.icon} />
+            <Text
+              style={[styles.detailText, { color: colors.icon }]}
+              numberOfLines={1}
+            >
+              {t(`filter.${job.jobType}`) || job.jobType}
+            </Text>
+          </View>
+        )}
       </View>
+
+      {job.imageUrl && (
+        <Image source={{ uri: job.imageUrl }} style={styles.jobImage} />
+      )}
 
       <Text
         style={[styles.description, { color: colors.text }]}
@@ -120,7 +137,7 @@ export function JobCard({
         <Text style={[styles.postedDate, { color: colors.icon }]}>
           {formatDate(job.postedDate)}
         </Text>
-        {job.source === "remote" ? (
+        {job.source === "remote" || job.isLocal === false ? (
           <View style={styles.onlineBadge}>
             <Ionicons name="globe-outline" size={11} color="#fff" />
             <Text style={styles.onlineBadgeText}>{t("badge.online")}</Text>
@@ -190,6 +207,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 12,
+  },
+  jobImage: {
+    width: "100%",
+    height: 150,
+    borderRadius: 8,
+    marginBottom: 12,
+    resizeMode: "cover",
   },
   cardFooter: {
     flexDirection: "row",

@@ -5,6 +5,7 @@ import { Colors } from "@/constants/theme";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useSavedJobsViewModel } from "@/viewmodels/SavedJobsViewModel";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import React, { useCallback } from "react";
@@ -28,6 +29,7 @@ export default function SavedJobsScreen() {
     savedJobs,
     isLoading,
     isRefreshing,
+    isFromCache,
     handleUnsave,
     handleRefresh,
     reload,
@@ -56,6 +58,21 @@ export default function SavedJobsScreen() {
     </View>
   );
 
+  const renderCacheNotice = () => {
+    if (!isFromCache) return null;
+    return (
+      <View
+        style={[
+          styles.cacheNotice,
+          { backgroundColor: colorScheme === "dark" ? "#2A1500" : "#FFF3E0" },
+        ]}
+      >
+        <Ionicons name="cloud-offline-outline" size={14} color="#FF9800" />
+        <Text style={styles.cacheNoticeText}>{t("network.cached")}</Text>
+      </View>
+    );
+  };
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
@@ -72,7 +89,12 @@ export default function SavedJobsScreen() {
             onSaveToggle={() => handleUnsave(item)}
           />
         )}
-        ListHeaderComponent={renderHeader}
+        ListHeaderComponent={
+          <>
+            {renderHeader()}
+            {renderCacheNotice()}
+          </>
+        }
         ListEmptyComponent={
           <EmptyState
             icon="bookmark-outline"
@@ -114,5 +136,20 @@ const styles = StyleSheet.create({
   },
   emptyList: {
     flex: 1,
+  },
+  cacheNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 6,
+  },
+  cacheNoticeText: {
+    fontSize: 12,
+    color: "#FF9800",
+    fontWeight: "500",
   },
 });

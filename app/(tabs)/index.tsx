@@ -1,11 +1,11 @@
 import { EmptyState } from "@/components/EmptyState";
 import { JobCard } from "@/components/JobCard";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { SearchHeader } from "@/components/SearchHeader";
 import { Colors } from "@/constants/theme";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { Job } from "@/types/job";
 import { useJobsViewModel } from "@/viewmodels/JobsViewModel";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -14,11 +14,11 @@ import React, { useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Platform,
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -31,25 +31,14 @@ export default function HomeScreen() {
   const { isConnected } = useNetworkStatus();
 
   const vm = useJobsViewModel();
+  const [isFilterModalVisible, setFilterModalVisible] = React.useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      if (vm.activeTab === "local") {
-        vm.handleRefresh();
-      }
+      vm.handleRefresh();
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [vm.activeTab])
   );
-
-  const handleJobPress = (job: Job) => {
-    if (job.source === "remote" && job.applyUrl) {
-      router.push(
-        `/job/${job.id}?applyUrl=${encodeURIComponent(job.applyUrl)}`
-      );
-    } else {
-      router.push(`/job/${job.id}`);
-    }
-  };
 
   const isDark = colorScheme === "dark";
 
@@ -117,67 +106,32 @@ export default function HomeScreen() {
     </View>
   );
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <Text style={[styles.title, { color: colors.text }]}>
-        {t("home.title")}
-      </Text>
-
-      {vm.activeTab === "local" && (
-        <View
-          style={[
-            styles.searchContainer,
-            {
-              backgroundColor: isDark ? "#2A2A2A" : "#F5F5F5",
-              borderColor: isDark ? "#3A3A3A" : "#E0E0E0",
-            },
-          ]}
-        >
-          <Ionicons
-            name="search"
-            size={20}
-            color={colors.icon}
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder={t("home.search")}
-            placeholderTextColor={colors.icon}
-            value={vm.searchQuery}
-            onChangeText={vm.setSearchQuery}
-          />
-          {vm.searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => vm.setSearchQuery("")}>
-              <Ionicons name="close-circle" size={20} color={colors.icon} />
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-
-      {vm.activeTab === "remote" && vm.remoteFromCache && (
-        <View
-          style={[
-            styles.cacheNotice,
-            { backgroundColor: isDark ? "#2A1500" : "#FFF3E0" },
-          ]}
-        >
-          <Ionicons name="cloud-offline-outline" size={14} color="#FF9800" />
-          <Text style={styles.cacheNoticeText}>{t("network.cached")}</Text>
-        </View>
-      )}
-
+  const headerComponent = (
+    <>
+      <SearchHeader
+        activeTab={vm.activeTab}
+        searchQuery={vm.searchQuery}
+        setSearchQuery={vm.setSearchQuery}
+        isDark={isDark}
+        colors={colors}
+        remoteFromCache={vm.remoteFromCache}
+        localFromCache={vm.localFromCache}
+        onFilterPress={() => setFilterModalVisible(true)}
+      />
       <View style={styles.headerRow}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>
           {vm.activeTab === "local"
             ? `${t("home.allJobs")} (${vm.filteredLocalJobs.length})`
-            : `${t("home.onlineJobs")} (${vm.remoteJobs.length})`}
+            : `${t("home.onlineJobs")} (${vm.filteredRemoteJobs ? vm.filteredRemoteJobs.length : vm.remoteJobs.length})`}
         </Text>
       </View>
-    </View>
+    </>
   );
 
   const currentJobs =
-    vm.activeTab === "local" ? vm.filteredLocalJobs : vm.remoteJobs;
+    vm.activeTab === "local"
+      ? vm.filteredLocalJobs
+      : vm.filteredRemoteJobs || vm.remoteJobs;
   const currentLoading =
     vm.activeTab === "local" ? vm.isLoadingLocal : vm.isLoadingRemote;
 
@@ -213,16 +167,20 @@ export default function HomeScreen() {
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <JobCard
+              key={item.id}
               job={item}
-              onPress={() => handleJobPress(item)}
-              onSaveToggle={
-                vm.activeTab === "local"
-                  ? () => vm.handleSaveToggle(item)
-                  : undefined
-              }
+              onPress={() => {
+                if (vm.activeTab === "local") {
+                  router.push(`/job/${item.id}`);
+                } else if (item.applyUrl) {
+                  router.push(`/job/${item.id}`);
+                }
+              }}
+              onSaveToggle={() => vm.handleSaveToggle(item)}
+              showSaveButton={true}
             />
           )}
-          ListHeaderComponent={renderHeader}
+          ListHeaderComponent={headerComponent}
           ListEmptyComponent={
             <EmptyState
               icon={
@@ -267,6 +225,94 @@ export default function HomeScreen() {
           <Ionicons name="add" size={28} color="#FFFFFF" />
         </TouchableOpacity>
       )}
+
+      {/* Filter Modal */}
+      <Modal
+        visible={isFilterModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: colors.background },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {t("home.filters") || "Filters"}
+              </Text>
+              <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+                <Ionicons name="close" size={24} color={colors.icon} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.filterSectionTitle, { color: colors.text }]}>
+              {t("filter.sortBy")}
+            </Text>
+            <View style={styles.filterRow}>
+              {["newest", "oldest"].map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[
+                    styles.filterChip,
+                    { borderColor: isDark ? "#3A3A3A" : "#E0E0E0" },
+                    vm.sortOption === opt && {
+                      backgroundColor: colors.tint,
+                      borderColor: colors.tint,
+                    },
+                  ]}
+                  onPress={() => vm.setSortOption(opt as any)}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      { color: vm.sortOption === opt ? "#fff" : colors.text },
+                    ]}
+                  >
+                    {opt === "newest" ? t("filter.newest") : t("filter.oldest")}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.filterSectionTitle, { color: colors.text }]}>
+              {t("filter.jobType")}
+            </Text>
+            <View style={styles.filterRow}>
+              {["all", "full-time", "part-time", "contract", "freelance"].map(
+                (opt) => (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[
+                      styles.filterChip,
+                      { borderColor: isDark ? "#3A3A3A" : "#E0E0E0" },
+                      vm.filterOption === opt && {
+                        backgroundColor: colors.tint,
+                        borderColor: colors.tint,
+                      },
+                    ]}
+                    onPress={() => vm.setFilterOption(opt as any)}
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        {
+                          color: vm.filterOption === opt ? "#fff" : colors.text,
+                        },
+                      ]}
+                    >
+                      {t(`filter.${opt}`)}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -353,6 +399,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingHorizontal: 16,
     marginBottom: 8,
   },
   sectionTitle: {
@@ -385,5 +432,48 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    padding: 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+  },
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginBottom: 12,
+    marginTop: 8,
+  },
+  filterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: "500",
   },
 });

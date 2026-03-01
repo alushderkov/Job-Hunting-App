@@ -11,7 +11,10 @@ export interface Job {
   createdAt: string;
   updatedAt: string;
   source?: "local" | "remote";
+  isLocal?: boolean;
   applyUrl?: string;
+  imageUrl?: string;
+  jobType?: string;
 }
 
 export type CreateJobInput = Omit<
