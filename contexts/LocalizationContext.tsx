@@ -29,6 +29,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Tab Navigation
     "tabs.jobs": "Jobs",
     "tabs.saved": "Saved",
+    "tabs.profile": "Profile",
     "tabs.settings": "Settings",
 
     // Home Screen
@@ -161,11 +162,46 @@ const translations: Record<Language, Record<string, string>> = {
     "discard.confirm": "Are you sure you want to discard this job?",
     "common.yes": "Yes",
     "common.no": "No",
+
+    // Auth
+    "auth.welcomeBack": "Welcome back!",
+    "auth.createAccount": "Create your account",
+    "auth.username": "Username",
+    "auth.password": "Password",
+    "auth.confirmPassword": "Confirm Password",
+    "auth.signIn": "Sign In",
+    "auth.signUp": "Sign Up",
+    "auth.noAccount": "Don't have an account?",
+    "auth.hasAccount": "Already have an account?",
+    "auth.fillFields": "Please fill in all fields",
+    "auth.passwordMismatch": "Passwords do not match",
+    "auth.passwordTooShort": "Password must be at least 6 characters",
+    "auth.usernameTooShort": "Username must be at least 3 characters",
+
+    // Profile
+    "profile.title": "Profile",
+    "profile.username": "Username",
+    "profile.memberSince": "Member since",
+    "profile.active": "Active",
+    "profile.signOut": "Sign Out",
+    "profile.signOutConfirm": "Sign Out?",
+    "profile.signOutMessage": "Are you sure you want to sign out?",
+
+    // Share
+    "share.title": "Share Job",
+    "share.text": "Check out this job:",
+
+    // Camera
+    "camera.title": "Select Image",
+    "camera.gallery": "Choose from Gallery",
+    "camera.take": "Take a Photo",
+    "camera.cancel": "Cancel",
   },
   ru: {
     // Tab Navigation
     "tabs.jobs": "Вакансии",
     "tabs.saved": "Сохранённые",
+    "tabs.profile": "Профиль",
     "tabs.settings": "Настройки",
 
     // Home Screen
@@ -298,6 +334,40 @@ const translations: Record<Language, Record<string, string>> = {
     "discard.confirm": "Отменить изменения?",
     "common.yes": "Да",
     "common.no": "Нет",
+
+    // Auth
+    "auth.welcomeBack": "С возвращением!",
+    "auth.createAccount": "Создайте аккаунт",
+    "auth.username": "Имя пользователя",
+    "auth.password": "Пароль",
+    "auth.confirmPassword": "Подтвердите пароль",
+    "auth.signIn": "Войти",
+    "auth.signUp": "Регистрация",
+    "auth.noAccount": "Нет аккаунта?",
+    "auth.hasAccount": "Уже есть аккаунт?",
+    "auth.fillFields": "Пожалуйста, заполните все поля",
+    "auth.passwordMismatch": "Пароли не совпадают",
+    "auth.passwordTooShort": "Пароль должен быть не менее 6 символов",
+    "auth.usernameTooShort": "Имя пользователя должно быть не менее 3 символов",
+
+    // Profile
+    "profile.title": "Профиль",
+    "profile.username": "Имя пользователя",
+    "profile.memberSince": "Дата регистрации",
+    "profile.active": "Активен",
+    "profile.signOut": "Выйти",
+    "profile.signOutConfirm": "Выйти?",
+    "profile.signOutMessage": "Вы уверены, что хотите выйти из аккаунта?",
+
+    // Share
+    "share.title": "Поделиться вакансией",
+    "share.text": "Посмотри эту вакансию:",
+
+    // Camera
+    "camera.title": "Выберите изображение",
+    "camera.gallery": "Выбрать из галереи",
+    "camera.take": "Сделать фото",
+    "camera.cancel": "Отмена",
   },
 };
 

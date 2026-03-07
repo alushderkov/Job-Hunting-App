@@ -1,3 +1,4 @@
+import { useRealtimeJobs } from "@/hooks/useRealtimeJobs";
 import jobService from "@/services/jobService";
 import { Job } from "@/types/job";
 import { useCallback, useEffect, useState } from "react";
@@ -34,6 +35,11 @@ export function useSavedJobsViewModel(): SavedJobsViewModel {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  // Real-time: auto-refresh saved jobs when DB changes
+  useRealtimeJobs(() => {
+    reload();
+  });
 
   const handleUnsave = useCallback(
     async (job: Job) => {

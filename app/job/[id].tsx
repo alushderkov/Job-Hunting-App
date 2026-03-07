@@ -11,6 +11,7 @@ import {
   Alert,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -62,6 +63,30 @@ export default function JobDetailsScreen() {
 
   const handleEdit = () => {
     router.push(`/edit-job/${jobId}`);
+  };
+
+  const handleShare = async () => {
+    if (!job) return;
+    try {
+      const message = [
+        `💼 ${job.title}`,
+        `🏢 ${job.company}`,
+        `📍 ${job.location}`,
+        `💰 ${job.salary}`,
+        "",
+        job.description.slice(0, 200) +
+          (job.description.length > 200 ? "..." : ""),
+        "",
+        `🔗 ${t("share.text")}`,
+      ].join("\n");
+
+      await Share.share({
+        message,
+        title: t("share.title"),
+      });
+    } catch (error) {
+      console.error("Error sharing job:", error);
+    }
   };
 
   const handleDelete = () => {
@@ -127,6 +152,9 @@ export default function JobDetailsScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerActions}>
+          <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
+            <Ionicons name="share-outline" size={24} color={colors.tint} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleEdit} style={styles.headerButton}>
             <Ionicons name="create-outline" size={24} color={colors.text} />
           </TouchableOpacity>

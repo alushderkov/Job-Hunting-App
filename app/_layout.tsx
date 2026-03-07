@@ -1,5 +1,6 @@
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { NetworkBanner } from "@/components/NetworkBanner";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { LocalizationProvider } from "@/contexts/LocalizationContext";
 import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 import {
@@ -26,6 +27,7 @@ function RootLayoutContent() {
       <View style={styles.root}>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="auth" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen
             name="job/[id]"
@@ -64,7 +66,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <LocalizationProvider>
-        <RootLayoutContent />
+        <AuthProvider>
+          <RootLayoutContent />
+        </AuthProvider>
       </LocalizationProvider>
     </ThemeProvider>
   );

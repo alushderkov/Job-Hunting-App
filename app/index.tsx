@@ -1,3 +1,4 @@
+import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
@@ -14,6 +15,7 @@ SplashScreen.preventAutoHideAsync().catch(console.warn);
 
 export default function SplashScreenComponent() {
   const router = useRouter();
+  const { session, isLoading } = useAuth();
   const opacity = useSharedValue(0);
   const scale = useSharedValue(0.3);
   const translateY = useSharedValue(50);
@@ -28,15 +30,24 @@ export default function SplashScreenComponent() {
       duration: 1000,
       easing: Easing.out(Easing.cubic),
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (isLoading) return;
 
     const timer = setTimeout(async () => {
       await SplashScreen.hideAsync();
-      router.replace("/(tabs)");
+      if (session) {
+        router.replace("/(tabs)" as any);
+      } else {
+        router.replace("/auth" as any);
+      }
     }, 300);
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isLoading, session]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

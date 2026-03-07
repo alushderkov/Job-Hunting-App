@@ -1,4 +1,5 @@
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useRealtimeJobs } from "@/hooks/useRealtimeJobs";
 import jobService from "@/services/jobService";
 import remoteJobApiService from "@/services/remoteJobApiService";
 import { Job } from "@/types/job";
@@ -98,6 +99,11 @@ export function useJobsViewModel(): JobsViewModel {
   useEffect(() => {
     loadLocalJobs();
   }, [loadLocalJobs]);
+
+  // Real-time: auto-refresh local jobs when DB changes
+  useRealtimeJobs(() => {
+    loadLocalJobs();
+  });
 
   useEffect(() => {
     if (activeTab === "remote" && !remoteLoaded.current) {

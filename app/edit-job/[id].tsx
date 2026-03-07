@@ -3,10 +3,10 @@ import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Colors } from "@/constants/theme";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useImagePicker } from "@/hooks/useImagePicker";
 import jobService from "@/services/jobService";
 import { supabase } from "@/services/supabase";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -47,17 +47,12 @@ export default function EditJobScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const { showImageOptions } = useImagePicker();
 
   const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
+    const uri = await showImageOptions();
+    if (uri) {
+      setImageUri(uri);
     }
   };
 
