@@ -2,8 +2,10 @@ import { Colors } from "@/constants/theme";
 import { useLocalization } from "@/contexts/LocalizationContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
 import React from "react";
 import {
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -13,10 +15,93 @@ import {
   View,
 } from "react-native";
 
+const isExpoGo =
+  Constants.appOwnership === "expo" ||
+  Constants.executionEnvironment === "storeClient";
+
+let Notifications: any = null;
+if (!isExpoGo) {
+  try {
+    Notifications = require("expo-notifications");
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  } catch (e) {
+    console.warn("Could not load expo-notifications", e);
+  }
+}
+
 export default function SettingsScreen() {
   const { colorScheme, toggleTheme } = useTheme();
   const { language, setLanguage, t } = useLocalization();
   const colors = Colors[colorScheme || "light"];
+
+  const sendTestNotification = async () => {
+    if (!Notifications) {
+      Alert.alert(
+        "Not Supported",
+        "Push notifications are not supported in Expo Go. Please use a development build."
+      );
+      return;
+    }
+
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission required",
+        "Please allow notifications to use this feature."
+      );
+      return;
+    }
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Job Hunting App 🚀",
+        body: "Here is your test notification! New jobs might be waiting.",
+        data: { data: "goes here" },
+      },
+      trigger: null, // send immediately
+    });
+  };
+
+  const scheduleDailyNotification = async () => {
+    if (!Notifications) {
+      Alert.alert(
+        "Not Supported",
+        "Push notifications are not supported in Expo Go. Please use a development build."
+      );
+      return;
+    }
+
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission required",
+        "Please allow notifications to use this feature."
+      );
+      return;
+    }
+
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Daily Job Check 💼",
+        body: "Don't forget to check for new remotes jobs today!",
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour: 23,
+        minute: 35,
+      },
+    });
+    Alert.alert("Success", "Daily notifications scheduled");
+  };
 
   const SettingSection = ({
     title,
@@ -183,6 +268,22 @@ export default function SettingsScreen() {
               </View>
             </TouchableOpacity>
           }
+        />
+      </SettingSection>
+
+      <SettingSection title="Notifications">
+        <SettingRow
+          icon="notifications-outline"
+          label="Test Notification"
+          onPress={sendTestNotification}
+          showArrow={true}
+        />
+        <Divider />
+        <SettingRow
+          icon="time-outline"
+          label="Schedule Daily push"
+          onPress={scheduleDailyNotification}
+          showArrow={true}
         />
       </SettingSection>
 

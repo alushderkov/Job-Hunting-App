@@ -31,7 +31,9 @@ function mapRemotiveJob(rj: RemotiveJob): Job {
     createdAt: now,
     updatedAt: now,
     source: "remote",
+    isLocal: false,
     applyUrl: rj.url,
+    jobType: rj.job_type || "full-time",
   };
 }
 
@@ -66,7 +68,7 @@ class RemoteJobApiService {
 
       return { jobs, fromCache: false };
     } catch {
-      const cached = await this.getCache();
+      const cached = await this.getCacheForOffline();
       if (cached) {
         return { jobs: cached, fromCache: true };
       }

@@ -29,14 +29,28 @@ const translations: Record<Language, Record<string, string>> = {
     // Tab Navigation
     "tabs.jobs": "Jobs",
     "tabs.saved": "Saved",
+    "tabs.profile": "Profile",
     "tabs.settings": "Settings",
 
     // Home Screen
     "home.title": "Remote Job Hunting",
     "home.search": "Search jobs...",
+    "home.searchRemote": "Search remote jobs...",
     "home.allJobs": "All Jobs",
     "home.noJobs": "No jobs found",
     "home.addJob": "Add Job",
+    "home.filters": "Filters",
+    "filter.sortBy": "Sort By",
+    "filter.newest": "Newest",
+    "filter.oldest": "Oldest",
+    "filter.jobType": "Job Type",
+    "filter.all": "All",
+    "filter.full-time": "Full Time",
+    "filter.full_time": "Full Time",
+    "filter.part-time": "Part Time",
+    "filter.part_time": "Part Time",
+    "filter.contract": "Contract",
+    "filter.freelance": "Freelance",
 
     // Tabs LabWork 2
     "home.tabLocal": "My Jobs",
@@ -148,19 +162,67 @@ const translations: Record<Language, Record<string, string>> = {
     "discard.confirm": "Are you sure you want to discard this job?",
     "common.yes": "Yes",
     "common.no": "No",
+
+    // Auth
+    "auth.welcomeBack": "Welcome back!",
+    "auth.createAccount": "Create your account",
+    "auth.username": "Username",
+    "auth.password": "Password",
+    "auth.confirmPassword": "Confirm Password",
+    "auth.signIn": "Sign In",
+    "auth.signUp": "Sign Up",
+    "auth.noAccount": "Don't have an account?",
+    "auth.hasAccount": "Already have an account?",
+    "auth.fillFields": "Please fill in all fields",
+    "auth.passwordMismatch": "Passwords do not match",
+    "auth.passwordTooShort": "Password must be at least 6 characters",
+    "auth.usernameTooShort": "Username must be at least 3 characters",
+
+    // Profile
+    "profile.title": "Profile",
+    "profile.username": "Username",
+    "profile.memberSince": "Member since",
+    "profile.active": "Active",
+    "profile.signOut": "Sign Out",
+    "profile.signOutConfirm": "Sign Out?",
+    "profile.signOutMessage": "Are you sure you want to sign out?",
+
+    // Share
+    "share.title": "Share Job",
+    "share.text": "Check out this job:",
+
+    // Camera
+    "camera.title": "Select Image",
+    "camera.gallery": "Choose from Gallery",
+    "camera.take": "Take a Photo",
+    "camera.cancel": "Cancel",
   },
   ru: {
     // Tab Navigation
     "tabs.jobs": "Вакансии",
     "tabs.saved": "Сохранённые",
+    "tabs.profile": "Профиль",
     "tabs.settings": "Настройки",
 
     // Home Screen
     "home.title": "Поиск удалённой работы",
     "home.search": "Поиск вакансий...",
+    "home.searchRemote": "Поиск вакансий удалённо...",
     "home.allJobs": "Все вакансии",
     "home.noJobs": "Вакансии не найдены",
     "home.addJob": "Добавить вакансию",
+    "home.filters": "Фильтры",
+    "filter.sortBy": "Сортировка",
+    "filter.newest": "Сначала новые",
+    "filter.oldest": "Сначала старые",
+    "filter.jobType": "Тип занятости",
+    "filter.all": "Все",
+    "filter.full-time": "Полная занятость",
+    "filter.full_time": "Полная занятость",
+    "filter.part-time": "Частичная занятость",
+    "filter.part_time": "Частичная занятость",
+    "filter.contract": "Контракт",
+    "filter.freelance": "Фриланс",
 
     // Tabs LabWork 2
     "home.tabLocal": "Мои вакансии",
@@ -272,6 +334,40 @@ const translations: Record<Language, Record<string, string>> = {
     "discard.confirm": "Отменить изменения?",
     "common.yes": "Да",
     "common.no": "Нет",
+
+    // Auth
+    "auth.welcomeBack": "С возвращением!",
+    "auth.createAccount": "Создайте аккаунт",
+    "auth.username": "Имя пользователя",
+    "auth.password": "Пароль",
+    "auth.confirmPassword": "Подтвердите пароль",
+    "auth.signIn": "Войти",
+    "auth.signUp": "Регистрация",
+    "auth.noAccount": "Нет аккаунта?",
+    "auth.hasAccount": "Уже есть аккаунт?",
+    "auth.fillFields": "Пожалуйста, заполните все поля",
+    "auth.passwordMismatch": "Пароли не совпадают",
+    "auth.passwordTooShort": "Пароль должен быть не менее 6 символов",
+    "auth.usernameTooShort": "Имя пользователя должно быть не менее 3 символов",
+
+    // Profile
+    "profile.title": "Профиль",
+    "profile.username": "Имя пользователя",
+    "profile.memberSince": "Дата регистрации",
+    "profile.active": "Активен",
+    "profile.signOut": "Выйти",
+    "profile.signOutConfirm": "Выйти?",
+    "profile.signOutMessage": "Вы уверены, что хотите выйти из аккаунта?",
+
+    // Share
+    "share.title": "Поделиться вакансией",
+    "share.text": "Посмотри эту вакансию:",
+
+    // Camera
+    "camera.title": "Выберите изображение",
+    "camera.gallery": "Выбрать из галереи",
+    "camera.take": "Сделать фото",
+    "camera.cancel": "Отмена",
   },
 };
 

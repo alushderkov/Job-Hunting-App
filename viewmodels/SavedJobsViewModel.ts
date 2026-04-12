@@ -1,3 +1,4 @@
+import { useRealtimeJobs } from "@/hooks/useRealtimeJobs";
 import jobService from "@/services/jobService";
 import { Job } from "@/types/job";
 import { useCallback, useEffect, useState } from "react";
@@ -6,6 +7,7 @@ interface SavedJobsViewModel {
   savedJobs: Job[];
   isLoading: boolean;
   isRefreshing: boolean;
+  isFromCache: boolean;
   handleUnsave: (job: Job) => Promise<void>;
   handleRefresh: () => Promise<void>;
   reload: () => Promise<void>;
@@ -15,12 +17,14 @@ export function useSavedJobsViewModel(): SavedJobsViewModel {
   const [savedJobs, setSavedJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFromCache, setIsFromCache] = useState(false);
 
   const reload = useCallback(async () => {
     try {
       setIsLoading(true);
-      const jobs = await jobService.getSavedJobs();
+      const { jobs, fromCache } = await jobService.getSavedJobs();
       setSavedJobs(jobs);
+      setIsFromCache(fromCache);
     } catch (err) {
       console.error("useSavedJobsViewModel reload:", err);
     } finally {
@@ -31,6 +35,11 @@ export function useSavedJobsViewModel(): SavedJobsViewModel {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  // Real-time: auto-refresh saved jobs when DB changes
+  useRealtimeJobs(() => {
+    reload();
+  });
 
   const handleUnsave = useCallback(
     async (job: Job) => {
@@ -54,6 +63,7 @@ export function useSavedJobsViewModel(): SavedJobsViewModel {
     savedJobs,
     isLoading,
     isRefreshing,
+    isFromCache,
     handleUnsave,
     handleRefresh,
     reload,
